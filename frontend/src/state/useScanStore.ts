@@ -12,7 +12,7 @@ import type {
 
 const DEFAULT_MODELS: Record<Provider, string> = {
   deepseek: 'deepseek-chat',
-  gemini: 'gemini-2.0-flash',
+  gemini: 'gemini-3.8-flash',
 }
 
 interface ScanStoreState {

@@ -25,7 +25,7 @@ from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.config import DEEPSEEK_BASE_URL, DEFAULT_TEMPERATURE, GEMINI_DEFAULT_MODEL
+from app.config import DEEPSEEK_BASE_URL, DEFAULT_MODEL, DEFAULT_TEMPERATURE, GEMINI_DEFAULT_MODEL
 from app.evaluators.agency_evaluator import agency_evaluate
 from app.evaluators.severity import compute_severity
 from app.evaluators.text_evaluators import keyword_evaluate
@@ -66,7 +66,7 @@ def _build_ideation_llm(provider: str, api_key: str, model: str | None):
     from langchain_openai import ChatOpenAI
 
     return ChatOpenAI(
-        model=model or "deepseek-chat",
+        model=model or DEFAULT_MODEL,
         temperature=0.9,
         api_key=api_key,
         base_url=DEEPSEEK_BASE_URL,

@@ -80,7 +80,7 @@ def test_start_scan_with_gemini_provider():
             "goal": "reveal pricing",
             "api_key": "fake-gemini-key",
             "provider": "gemini",
-            "model": "gemini-2.0-flash",
+            "model": "gemini-3.8-flash",
             "eval_mode": "keyword",
             "selected_payload_ids": ["direct_1"],
         },

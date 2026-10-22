@@ -9,7 +9,13 @@ DEFAULT_MODEL = "deepseek-chat"
 DEFAULT_TEMPERATURE = 0.0  # Deterministic responses for consistent scanning
 REQUEST_TIMEOUT = 30  # Seconds before a request is considered timed out
 
-GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"
+# Google retires Gemini model IDs over time (gemini-2.0-flash was fully
+# sunset, not just soft-deprecated) — if this 404s, check
+# https://ai.google.dev/gemini-api/docs/models for the current recommended
+# ID. Deliberately NOT using the "-latest" alias: Google documents it as a
+# moving target that gets repointed to different model generations, which
+# trades one kind of breakage for another.
+GEMINI_DEFAULT_MODEL = "gemini-3.8-flash"
 
 CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 

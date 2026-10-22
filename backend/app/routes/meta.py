@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.config import DEFAULT_MODEL, GEMINI_DEFAULT_MODEL
 from app.models.payload import TargetType
 from app.payloads.registry import ALL_PAYLOADS, get_by_target_type
 
@@ -16,8 +17,8 @@ def list_payloads(target_type: TargetType | None = None):
 def list_providers():
     return {
         "providers": [
-            {"id": "deepseek", "label": "DeepSeek", "default_model": "deepseek-chat"},
-            {"id": "gemini", "label": "Gemini", "default_model": "gemini-2.0-flash"},
+            {"id": "deepseek", "label": "DeepSeek", "default_model": DEFAULT_MODEL},
+            {"id": "gemini", "label": "Gemini", "default_model": GEMINI_DEFAULT_MODEL},
         ]
     }
 

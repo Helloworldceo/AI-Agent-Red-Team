@@ -194,7 +194,7 @@ Switchable per scan in the UI — the API key field clears on switch so a key ne
 | Provider | Default model | Notes |
 |---|---|---|
 | DeepSeek | `deepseek-chat` | OpenAI-compatible endpoint |
-| Gemini | `gemini-2.0-flash` | via `langchain-google-genai` |
+| Gemini | `gemini-3.8-flash` | via `langchain-google-genai`; Google retires model IDs over time — check [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models) if this 404s |
 
 ## Testing
 
