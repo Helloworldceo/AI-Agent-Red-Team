@@ -8,4 +8,6 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: CORS_ORIGINS
-        value: https://ai-agent-redteam.netlify.app
+        # CORS matches the browser's Origin header (scheme + host only, no path),
+        # so this is the GitHub Pages domain itself, not the /AI-Agent-Red-Team/ path.
+        value: https://helloworldceo.github.io

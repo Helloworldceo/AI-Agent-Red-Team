@@ -18,7 +18,7 @@ from datetime import date
 from pathlib import Path
 
 FINDINGS_DIR = Path(__file__).parent / "findings"
-DEMO_URL = "https://ai-agent-redteam.netlify.app"  # update once the live demo is deployed
+DEMO_URL = "https://helloworldceo.github.io/AI-Agent-Red-Team/"
 REPO_FINDINGS_URL = "https://github.com/Helloworldceo/AI-Agent-Red-Team/tree/main/backend/research/findings"
 
 _HASHTAGS = "#AIsecurity #LLMsecurity #PromptInjection #AgenticAI #RedTeam"

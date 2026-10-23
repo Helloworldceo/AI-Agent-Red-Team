@@ -1,6 +1,6 @@
 # AI Agent Red-Team Tool
 
-**Live demo:** [ai-agent-redteam.netlify.app](https://ai-agent-redteam.netlify.app) — bring your own DeepSeek or Gemini API key, nothing is ever stored server-side. Want it run against *your* agent with a full written report? **davidabdisa40@gmail.com**.
+**Live demo:** [helloworldceo.github.io/AI-Agent-Red-Team](https://helloworldceo.github.io/AI-Agent-Red-Team/) — bring your own DeepSeek or Gemini API key, nothing is ever stored server-side. Want it run against *your* agent with a full written report? **davidabdisa40@gmail.com**.
 
 Adversarial testing for AI agents — not just a raw system prompt. Most AI products today aren't a single chat completion anymore: they call tools, they read retrieved documents, they hold multi-turn conversations. This tool tests all three of those surfaces, on purpose, because that's where most real agentic deployments actually live — and where most of them ship with **zero adversarial testing**.
 
@@ -171,7 +171,7 @@ A scan with a 5% raw success rate and one `critical` tool-call incident visibly 
 
 ## Quick start
 
-Fastest way to try it: open the [live demo](https://ai-agent-redteam.netlify.app) and paste your own API key. To run it locally instead:
+Fastest way to try it: open the [live demo](https://helloworldceo.github.io/AI-Agent-Red-Team/) and paste your own API key. To run it locally instead:
 
 **Backend:**
 ```bash
