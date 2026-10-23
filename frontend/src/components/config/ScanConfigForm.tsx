@@ -60,6 +60,9 @@ export function ScanConfigForm() {
             className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm"
             placeholder={provider === 'gemini' ? 'AIza...' : 'sk-...'}
           />
+          <p className="mt-1 text-[11px] text-neutral-500">
+            Sent straight to {provider === 'gemini' ? 'Google' : 'DeepSeek'} for this scan only — never stored on our server.
+          </p>
         </div>
 
         <div>

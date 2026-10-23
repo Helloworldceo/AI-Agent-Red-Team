@@ -43,7 +43,11 @@ jobs:
             python -m research.generate_payload --provider gemini --api-key "$GEMINI_API_KEY"
           fi
 
-      - name: Commit and push the finding
+      - name: Draft the LinkedIn post from today's finding
+        working-directory: backend
+        run: python -m research.draft_post
+
+      - name: Commit and push the finding + post draft
         run: |
           git config user.name "Dawit Abdisa"
           git config user.email "davidabdisa.52@gmail.com"
@@ -52,6 +56,6 @@ jobs:
             echo "Nothing new to commit."
           else
             today=$(date -u +%F)
-            git commit -m "Daily research: $today finding"
+            git commit -m "Daily research: $today finding + post draft"
             git push
           fi

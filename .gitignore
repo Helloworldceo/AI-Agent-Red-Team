@@ -11,6 +11,10 @@ frontend/node_modules/
 frontend/dist/
 frontend/.env
 frontend/*.local
+frontend/tsconfig.tsbuildinfo
 
 # OS
 .DS_Store
+
+# Local Netlify folder
+.netlify

@@ -4,7 +4,7 @@ import io
 import json
 import threading
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
@@ -13,6 +13,7 @@ from app.config import DEEPSEEK_BASE_URL, DEFAULT_TEMPERATURE, REQUEST_TIMEOUT
 from app.models.payload import TargetType
 from app.models.scan import ScanRequest, ScanStatusResponse
 from app.payloads.registry import get_by_ids, get_by_target_type
+from app.rate_limit import limiter
 from app.runner import run_scan, summarize_results
 from app.scan_store import create_scan, get_scan
 from app.targets.direct_chat import DirectChatTarget
@@ -88,7 +89,8 @@ def _run_in_background(scan_id: str, req: ScanRequest) -> None:
 
 
 @router.post("/scans")
-def start_scan(req: ScanRequest):
+@limiter.limit("5/hour")
+def start_scan(request: Request, req: ScanRequest):
     payloads = (
         get_by_ids(req.selected_payload_ids)
         if req.selected_payload_ids

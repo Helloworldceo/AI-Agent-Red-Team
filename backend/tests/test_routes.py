@@ -7,6 +7,10 @@ from langchain_core.messages import AIMessage
 from app.main import app
 
 client = TestClient(app)
+# The rate limiter is for the public deployment; disabled here so the many
+# /scans calls across this file's tests don't trip it. test_rate_limit_on_scans
+# re-enables it, scoped to just that test.
+app.state.limiter.enabled = False
 
 
 class _FakeLLM:
@@ -111,6 +115,25 @@ def test_cancel_scan():
     cancel_resp = client.post(f"/scans/{scan_id}/cancel")
     assert cancel_resp.status_code == 200
     _wait_for_completion(scan_id)  # should not hang
+
+
+def test_rate_limit_on_scans():
+    app.state.limiter.enabled = True
+    try:
+        payload = {
+            "target_type": "direct_chat",
+            "system_prompt": "sys",
+            "goal": "goal",
+            "api_key": "fake-key",
+            "selected_payload_ids": ["direct_1"],
+        }
+        for _ in range(5):
+            resp = client.post("/scans", json=payload)
+            assert resp.status_code == 200
+        resp = client.post("/scans", json=payload)
+        assert resp.status_code == 429
+    finally:
+        app.state.limiter.enabled = False
 
 
 def test_export_json_and_csv():

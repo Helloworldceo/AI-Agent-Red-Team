@@ -55,6 +55,21 @@ export function ScanPage() {
             <ResultList />
           </section>
         )}
+
+        <footer className="border-t border-neutral-800 pt-6 text-center space-y-1">
+          <p className="text-sm text-neutral-300">
+            Want this run against <span className="font-medium">your</span> agent, with a full written report?
+          </p>
+          <p className="text-xs text-neutral-500">
+            <a
+              href="mailto:davidabdisa40@gmail.com?subject=Red-team%20audit%20request"
+              className="text-indigo-400 hover:text-indigo-300 underline"
+            >
+              davidabdisa40@gmail.com
+            </a>{' '}
+            — paid audits, one agent at a time.
+          </p>
+        </footer>
       </div>
     </div>
   )

@@ -1,5 +1,7 @@
 # AI Agent Red-Team Tool
 
+**Live demo:** [ai-agent-redteam.netlify.app](https://ai-agent-redteam.netlify.app) — bring your own DeepSeek or Gemini API key, nothing is ever stored server-side. Want it run against *your* agent with a full written report? **davidabdisa40@gmail.com**.
+
 Adversarial testing for AI agents — not just a raw system prompt. Most AI products today aren't a single chat completion anymore: they call tools, they read retrieved documents, they hold multi-turn conversations. This tool tests all three of those surfaces, on purpose, because that's where most real agentic deployments actually live — and where most of them ship with **zero adversarial testing**.
 
 It's a direct extension of an earlier project, [`prompt-injection-scanner`](https://github.com/helloworldceo/prompt-injection-scanner), which tested only the single "system prompt + chat completion" surface. This tool keeps that scanner's 7 attack categories and adds the attack surfaces that only exist once an LLM has tools and memory.
@@ -169,6 +171,8 @@ A scan with a 5% raw success rate and one `critical` tool-call incident visibly 
 
 ## Quick start
 
+Fastest way to try it: open the [live demo](https://ai-agent-redteam.netlify.app) and paste your own API key. To run it locally instead:
+
 **Backend:**
 ```bash
 cd backend
@@ -185,7 +189,7 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-Binds to `127.0.0.1` by default — this is a local tool, same posture as the Streamlit apps it's descended from. No auth; add one before exposing it publicly.
+Binds to `127.0.0.1` by default for local runs. The live demo above is the public deployment: `CORS_ORIGINS` is set via env var and `POST /scans` is rate-limited per-IP (`app/rate_limit.py`) — no per-user auth yet, since the service never holds an API key beyond the request that used it.
 
 ## Two LLM providers
 
@@ -224,6 +228,10 @@ frontend/src/
 ## Roadmap
 
 - SQLite-backed scan history (currently in-memory, cleared on restart)
-- Auth / rate-limiting — only needed once this is deployed somewhere public
+- Per-user auth — only needed if scan history or paid tiers move server-side
 - Multi-scan history UI
 - Playwright / component-level frontend tests
+
+## Daily research → content
+
+`backend/research/generate_payload.py` runs daily via [`.github/workflows/daily-research.yml`](.github/workflows/daily-research.yml): it brainstorms one new adversarial technique, tests it for real against this project's own targets, and writes an honest pass/fail report to `backend/research/findings/YYYY-MM-DD.md`. `backend/research/draft_post.py` then turns that report into a ready-to-paste LinkedIn draft (`YYYY-MM-DD.post.md`, same folder) — a human still reviews and posts it, nothing auto-publishes.
