@@ -108,3 +108,18 @@ export interface ScanStatusResponse {
   error: string | null
   created_at: string
 }
+
+export interface FindingSummary {
+  date: string
+  category: string
+  technique: string
+  hypothesis: string
+  template: string
+  succeeded: boolean
+  severity: Severity
+}
+
+export interface FindingDetail extends FindingSummary {
+  raw_markdown: string
+  post_draft: string | null
+}

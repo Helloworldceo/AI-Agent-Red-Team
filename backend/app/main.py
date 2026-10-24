@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import CORS_ORIGINS
 from app.rate_limit import limiter
-from app.routes import meta, scans
+from app.routes import meta, research, scans
 
 app = FastAPI(title="AI Agent Red-Team Tool")
 app.state.limiter = limiter
@@ -21,6 +21,7 @@ app.add_middleware(
 
 app.include_router(meta.router)
 app.include_router(scans.router)
+app.include_router(research.router)
 
 
 @app.get("/health")

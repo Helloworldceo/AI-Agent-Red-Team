@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { TargetTypeSelector } from '../components/config/TargetTypeSelector'
 import { ScanConfigForm } from '../components/config/ScanConfigForm'
 import { PayloadCategorySelector } from '../components/config/PayloadCategorySelector'
@@ -10,13 +11,17 @@ import { CategoryBreakdown } from '../components/results/CategoryBreakdown'
 import { SeverityBreakdown } from '../components/results/SeverityBreakdown'
 import { ResultList } from '../components/results/ResultList'
 import { ExportButtons } from '../components/export/ExportButtons'
+import { ResearchLog } from '../components/research/ResearchLog'
 import { useScanStore } from '../state/useScanStore'
+
+type Tab = 'scanner' | 'research'
 
 export function ScanPage() {
   const status = useScanStore((s) => s.status)
   const error = useScanStore((s) => s.error)
   const summary = useScanStore((s) => s.summary)
   const hasResults = status === 'completed' || status === 'cancelled'
+  const [tab, setTab] = useState<Tab>('scanner')
 
   return (
     <div className="min-h-screen px-4 py-8 sm:py-12">
@@ -29,31 +34,57 @@ export function ScanPage() {
           </p>
         </header>
 
-        <section className="space-y-4">
-          <TargetTypeSelector />
-          <ScanConfigForm />
-          <PayloadCategorySelector />
-          <RunScanButton />
-          {error && <p className="text-xs text-red-400">{error}</p>}
-        </section>
+        <div className="flex gap-2 border-b border-neutral-800">
+          {([
+            ['scanner', 'Scanner'],
+            ['research', 'Research log'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              className={`text-sm px-3 py-2 -mb-px border-b-2 transition-colors ${
+                tab === value
+                  ? 'border-indigo-400 text-neutral-100'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-        <section className="space-y-3">
-          <ScanProgressBar />
-          <LiveResultFeed />
-        </section>
+        {tab === 'research' && <ResearchLog />}
 
-        {hasResults && summary && (
-          <section className="space-y-6 border-t border-neutral-800 pt-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold">Scan results</h2>
-              <ExportButtons />
-            </div>
-            <RiskRatingBanner />
-            <SummaryCards />
-            <SeverityBreakdown />
-            <CategoryBreakdown />
-            <ResultList />
-          </section>
+        {tab === 'scanner' && (
+          <>
+            <section className="space-y-4">
+              <TargetTypeSelector />
+              <ScanConfigForm />
+              <PayloadCategorySelector />
+              <RunScanButton />
+              {error && <p className="text-xs text-red-400">{error}</p>}
+            </section>
+
+            <section className="space-y-3">
+              <ScanProgressBar />
+              <LiveResultFeed />
+            </section>
+
+            {hasResults && summary && (
+              <section className="space-y-6 border-t border-neutral-800 pt-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-semibold">Scan results</h2>
+                  <ExportButtons />
+                </div>
+                <RiskRatingBanner />
+                <SummaryCards />
+                <SeverityBreakdown />
+                <CategoryBreakdown />
+                <ResultList />
+              </section>
+            )}
+          </>
         )}
 
         <footer className="border-t border-neutral-800 pt-6 text-center space-y-1">

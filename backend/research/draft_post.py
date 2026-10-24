@@ -12,10 +12,11 @@ Designed to run right after generate_payload.py, both locally and from the
 daily GitHub Actions workflow (.github/workflows/daily-research.yml).
 """
 
-import re
 import sys
 from datetime import date
 from pathlib import Path
+
+from research.parsing import extract_field, extract_verdict
 
 FINDINGS_DIR = Path(__file__).parent / "findings"
 DEMO_URL = "https://helloworldceo.github.io/AI-Agent-Red-Team/"
@@ -24,27 +25,11 @@ REPO_FINDINGS_URL = "https://github.com/Helloworldceo/AI-Agent-Red-Team/tree/mai
 _HASHTAGS = "#AIsecurity #LLMsecurity #PromptInjection #AgenticAI #RedTeam"
 
 
-def _extract_field(text: str, label: str) -> str:
-    match = re.search(rf"\*\*{label}:\*\* (.+?)\s*$", text, re.MULTILINE)
-    return match.group(1).strip() if match else ""
-
-
-def _extract_verdict(text: str) -> tuple[bool, str]:
-    match = re.search(r"^## Verdict: (.+)$", text, re.MULTILINE)
-    if not match:
-        return False, "info"
-    line = match.group(1)
-    succeeded = "⚠️" in line
-    severity_match = re.search(r"\(worst severity: (\w+)\)", line)
-    severity = severity_match.group(1) if severity_match else "info"
-    return succeeded, severity
-
-
 def render_post(finding_text: str) -> str:
-    category = _extract_field(finding_text, "Category")
-    technique = _extract_field(finding_text, "Technique")
-    hypothesis = _extract_field(finding_text, "Hypothesis")
-    succeeded, severity = _extract_verdict(finding_text)
+    category = extract_field(finding_text, "Category")
+    technique = extract_field(finding_text, "Technique")
+    hypothesis = extract_field(finding_text, "Hypothesis")
+    succeeded, severity = extract_verdict(finding_text)
 
     if succeeded:
         hook = (
