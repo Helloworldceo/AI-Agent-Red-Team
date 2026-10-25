@@ -23,25 +23,19 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt
 
-      - name: Check that an API key secret is configured
+      - name: Check that the API key secret is configured
         run: |
-          if [ -z "${{ secrets.DEEPSEEK_API_KEY }}" ] && [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
-            echo "::error::Neither DEEPSEEK_API_KEY nor GEMINI_API_KEY is set as a repo secret."
-            echo "::error::Add one at Settings -> Secrets and variables -> Actions -> New repository secret."
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "::error::GEMINI_API_KEY is not set as a repo secret."
+            echo "::error::Add it at Settings -> Secrets and variables -> Actions -> New repository secret."
             exit 1
           fi
 
       - name: Run daily research job
         working-directory: backend
         env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          if [ -n "$DEEPSEEK_API_KEY" ]; then
-            python -m research.generate_payload --provider deepseek --api-key "$DEEPSEEK_API_KEY"
-          else
-            python -m research.generate_payload --provider gemini --api-key "$GEMINI_API_KEY"
-          fi
+        run: python -m research.generate_payload --api-key "$GEMINI_API_KEY"
 
       - name: Draft the LinkedIn post from today's finding
         working-directory: backend
