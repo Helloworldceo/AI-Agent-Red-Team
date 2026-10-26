@@ -25,11 +25,13 @@ Actions workflow (.github/workflows/daily-research.yml).
 
 import argparse
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
+import httpx
 from pydantic import BaseModel, Field
 
 from app.config import DEFAULT_TEMPERATURE, GEMINI_DEFAULT_MODEL
@@ -124,6 +126,11 @@ def _build_ideation_llm(api_key: str, model: str | None, *, relax_safety: bool =
         model=model or GEMINI_DEFAULT_MODEL,
         temperature=0.9,  # some creativity for ideation, unlike the deterministic scan runs
         google_api_key=api_key,
+        # Fail fast: with no timeout and the SDK's default 6 retries + backoff,
+        # a flaky connection turned into a ~5 minute hang and then a crash
+        # ("Connection reset by peer"). _generate_with_retries() handles retries.
+        timeout=90,
+        max_retries=2,
         **kwargs,
     )
 
@@ -157,24 +164,49 @@ def _generate_candidate(llm, focus_area: str) -> dict:
     return parsed.model_dump()
 
 
+# Network-level failures worth retrying. Quota / auth / bad-request errors are
+# deliberately NOT in here, so they still fail the run immediately.
+_TRANSIENT_ERRORS: tuple[type[BaseException], ...] = (
+    ConnectionError,
+    TimeoutError,
+    httpx.TransportError,
+)
+try:
+    from google.genai import errors as _genai_errors
+
+    _TRANSIENT_ERRORS += (_genai_errors.ServerError,)  # 5xx from the Gemini API
+except ImportError:
+    pass
+
+
 def _generate_with_retries(llm, attempts: int = 3) -> dict:
     """Try up to `attempts` focus areas, starting from one picked by the date.
-    Only safety blocks are retried; any other error propagates immediately so
-    quota/auth/network problems still fail the run loudly."""
+    Safety blocks and transient network errors are retried; anything else
+    (quota, auth, bad request) propagates immediately so it fails loudly."""
     start = date.today().toordinal() % len(_FOCUS_AREAS)
+    last_error: Exception | None = None
     for i in range(attempts):
         # Step of 5 is coprime with 12, so retries never repeat a focus area.
         focus = _FOCUS_AREAS[(start + i * 5) % len(_FOCUS_AREAS)]
         try:
             candidate = _generate_candidate(llm, focus)
         except IdeationBlocked as e:
-            print(f"Attempt {i + 1}/{attempts} blocked (focus: {focus}): {e}")
+            print(f"Attempt {i + 1}/{attempts} blocked (focus: {focus}): {e}", flush=True)
+            last_error = e
             continue
-        print(f"Focus area: {focus}")
+        except _TRANSIENT_ERRORS as e:
+            print(f"Attempt {i + 1}/{attempts} hit a transient API error: {e!r}", flush=True)
+            last_error = e
+            if i < attempts - 1:
+                time.sleep(10 * (i + 1))
+            continue
+        print(f"Focus area: {focus}", flush=True)
         return candidate
-    raise IdeationBlocked(
-        f"all {attempts} ideation attempts were blocked by Gemini's safety filter"
-    )
+    if isinstance(last_error, IdeationBlocked):
+        raise IdeationBlocked(
+            f"all {attempts} ideation attempts were blocked by Gemini's safety filter"
+        )
+    raise last_error
 
 
 def _test_against_direct_chat(llm, template: str, goal: str) -> dict:
