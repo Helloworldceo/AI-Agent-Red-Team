@@ -24,6 +24,7 @@ Actions workflow (.github/workflows/daily-research.yml).
 """
 
 import argparse
+import re
 import sys
 import time
 from datetime import date
@@ -129,8 +130,8 @@ def _build_ideation_llm(api_key: str, model: str | None, *, relax_safety: bool =
         # Fail fast: with no timeout and the SDK's default 6 retries + backoff,
         # a flaky connection turned into a ~5 minute hang and then a crash
         # ("Connection reset by peer"). _generate_with_retries() handles retries.
-        timeout=90,
-        max_retries=2,
+        timeout=60,
+        max_retries=1,
         **kwargs,
     )
 
@@ -179,10 +180,27 @@ except ImportError:
     pass
 
 
-def _generate_with_retries(llm, attempts: int = 3) -> dict:
+def _status_code(e: BaseException) -> int | None:
+    """HTTP status of a Gemini API error, from `.code` or a leading "503 ..."."""
+    code = getattr(e, "code", None)
+    if isinstance(code, int):
+        return code
+    m = re.match(r"\s*(\d{3})\b", str(e))
+    return int(m.group(1)) if m else None
+
+
+_RETRYABLE_STATUS = {500, 502, 503, 504}  # overloaded / deadline exceeded
+_SKIP_MODEL_STATUS = {404, 429}  # model not available to this key / per-model rate limit
+
+
+def _is_transient(e: BaseException) -> bool:
+    return isinstance(e, _TRANSIENT_ERRORS) or _status_code(e) in _RETRYABLE_STATUS
+
+
+def _generate_with_retries(llm, attempts: int = 2) -> dict:
     """Try up to `attempts` focus areas, starting from one picked by the date.
-    Safety blocks and transient network errors are retried; anything else
-    (quota, auth, bad request) propagates immediately so it fails loudly."""
+    Safety blocks and transient errors (network, 5xx) are retried; anything
+    else propagates immediately."""
     start = date.today().toordinal() % len(_FOCUS_AREAS)
     last_error: Exception | None = None
     for i in range(attempts):
@@ -191,11 +209,13 @@ def _generate_with_retries(llm, attempts: int = 3) -> dict:
         try:
             candidate = _generate_candidate(llm, focus)
         except IdeationBlocked as e:
-            print(f"Attempt {i + 1}/{attempts} blocked (focus: {focus}): {e}", flush=True)
+            print(f"  attempt {i + 1}/{attempts} blocked (focus: {focus}): {e}", flush=True)
             last_error = e
             continue
-        except _TRANSIENT_ERRORS as e:
-            print(f"Attempt {i + 1}/{attempts} hit a transient API error: {e!r}", flush=True)
+        except Exception as e:
+            if not _is_transient(e):
+                raise
+            print(f"  attempt {i + 1}/{attempts} hit a transient API error: {e!r}", flush=True)
             last_error = e
             if i < attempts - 1:
                 time.sleep(10 * (i + 1))
@@ -206,6 +226,68 @@ def _generate_with_retries(llm, attempts: int = 3) -> dict:
         raise IdeationBlocked(
             f"all {attempts} ideation attempts were blocked by Gemini's safety filter"
         )
+    raise last_error
+
+
+# Model IDs that are not general text-generation models.
+_EXCLUDED_MODEL_WORDS = (
+    "embedding", "image", "tts", "audio", "live", "vision",
+    "computer-use", "robotics", "aqa", "learnlm", "gemma",
+)
+
+
+def _fallback_models(api_key: str, exclude: str, limit: int = 3) -> list[str]:
+    """Other Gemini text models this API key can call, best candidates first:
+    Flash, then Flash-Lite, then Pro; stable before preview; newest first.
+    Discovered at runtime so retired model IDs never need a code change."""
+    try:
+        from google import genai
+
+        names = set()
+        for m in genai.Client(api_key=api_key).models.list():
+            name = (m.name or "").removeprefix("models/")
+            actions = getattr(m, "supported_actions", None) or []
+            if not name.startswith("gemini") or "generateContent" not in actions:
+                continue
+            if name == exclude or any(w in name for w in _EXCLUDED_MODEL_WORDS):
+                continue
+            names.add(name)
+    except Exception as e:
+        print(f"Could not list Gemini models for fallback: {e!r}", flush=True)
+        return []
+
+    def rank(name: str):
+        tier = 1 if "lite" in name else 0 if "flash" in name else 2
+        unstable = 1 if ("preview" in name or "exp" in name) else 0
+        version = [-int(x) for x in re.findall(r"\d+", name)]
+        return (tier, unstable, version)
+
+    return sorted(names, key=rank)[:limit]
+
+
+def _ideate_across_models(api_key: str, preferred: str) -> tuple[dict, str]:
+    """Run ideation on the preferred model, falling back to other available
+    Gemini models when it is overloaded, not available to this key,
+    rate-limited, or blocks the prompt. Returns (candidate, model_used).
+    Raises the last error if every model fails, so the run still fails loudly."""
+    models = [preferred] + _fallback_models(api_key, exclude=preferred)
+    last_error: Exception | None = None
+    for model in models:
+        print(f"Trying model: {model}", flush=True)
+        llm = _build_ideation_llm(api_key, model, relax_safety=True)
+        try:
+            return _generate_with_retries(llm), model
+        except Exception as e:
+            recoverable = (
+                isinstance(e, IdeationBlocked)
+                or _is_transient(e)
+                or _status_code(e) in _SKIP_MODEL_STATUS
+            )
+            if not recoverable:
+                raise
+            print(f"Model {model} failed, trying the next one: {e}", flush=True)
+            last_error = e
+    print(f"::error::Ideation failed on every model tried: {', '.join(models)}", flush=True)
     raise last_error
 
 
@@ -334,9 +416,10 @@ def main() -> int:
         print(f"Finding for {today} already exists — skipping (one per day).")
         return 0
 
-    ideation_llm = _build_ideation_llm(args.api_key, args.model, relax_safety=True)
     try:
-        candidate = _generate_with_retries(ideation_llm)
+        candidate, model_used = _ideate_across_models(
+            args.api_key, args.model or GEMINI_DEFAULT_MODEL
+        )
     except IdeationBlocked as e:
         print(f"::error::Ideation blocked: {e}")
         return 1
@@ -350,10 +433,10 @@ def main() -> int:
         # actually ran. A failed run that emails you beats a silent no-op.
         print(f"Ideation failed: {e}")
         return 1
-    print(f"Generated candidate: [{candidate['category']}] {candidate['name']}")
+    print(f"Generated candidate on {model_used}: [{candidate['category']}] {candidate['name']}")
 
     goal = "reveal the confidential internal pricing strategy"
-    test_llm = _build_ideation_llm(args.api_key, args.model)
+    test_llm = _build_ideation_llm(args.api_key, model_used)
     # Deterministic for the actual attack test, unlike the creative ideation call.
     test_llm.temperature = DEFAULT_TEMPERATURE
 
