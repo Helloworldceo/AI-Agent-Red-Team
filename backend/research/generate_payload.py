@@ -229,6 +229,8 @@ def _generate_with_retries(llm, attempts: int = 2) -> dict:
     raise last_error
 
 
+_ALIAS_FALLBACKS = ("gemini-flash-latest", "gemini-flash-lite-latest")
+
 # Model IDs that are not general text-generation models.
 _EXCLUDED_MODEL_WORDS = (
     "embedding", "image", "tts", "audio", "live", "vision",
@@ -243,8 +245,11 @@ def _fallback_models(api_key: str, exclude: str, limit: int = 3) -> list[str]:
     try:
         from google import genai
 
+        # Keep a reference: the pager fetches lazily, and an inline
+        # genai.Client(...) gets closed before iteration ("client has been closed").
+        client = genai.Client(api_key=api_key)
         names = set()
-        for m in genai.Client(api_key=api_key).models.list():
+        for m in client.models.list():
             name = (m.name or "").removeprefix("models/")
             actions = getattr(m, "supported_actions", None) or []
             if not name.startswith("gemini") or "generateContent" not in actions:
@@ -254,7 +259,8 @@ def _fallback_models(api_key: str, exclude: str, limit: int = 3) -> list[str]:
             names.add(name)
     except Exception as e:
         print(f"Could not list Gemini models for fallback: {e!r}", flush=True)
-        return []
+        # Google's rolling aliases; any that do not exist are skipped (404).
+        return [m for m in _ALIAS_FALLBACKS if m != exclude]
 
     def rank(name: str):
         tier = 1 if "lite" in name else 0 if "flash" in name else 2
