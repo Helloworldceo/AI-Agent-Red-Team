@@ -130,8 +130,10 @@ def _build_ideation_llm(api_key: str, model: str | None, *, relax_safety: bool =
         # Fail fast: with no timeout and the SDK's default 6 retries + backoff,
         # a flaky connection turned into a ~5 minute hang and then a crash
         # ("Connection reset by peer"). _generate_with_retries() handles retries.
-        timeout=60,
-        max_retries=1,
+        # Not lower than ~3 min: the SDK forwards this as the server-side
+        # deadline, and at 60s busy models answered 504 DEADLINE_EXCEEDED.
+        timeout=180,
+        max_retries=0,
         **kwargs,
     )
 
@@ -265,8 +267,9 @@ def _fallback_models(api_key: str, exclude: str, limit: int = 3) -> list[str]:
     def rank(name: str):
         tier = 1 if "lite" in name else 0 if "flash" in name else 2
         unstable = 1 if ("preview" in name or "exp" in name) else 0
+        alias = 1 if name.endswith("-latest") else 0  # usually = the overloaded default
         version = [-int(x) for x in re.findall(r"\d+", name)]
-        return (tier, unstable, version)
+        return (alias, tier, unstable, version)
 
     return sorted(names, key=rank)[:limit]
 
