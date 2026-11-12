@@ -2,6 +2,8 @@
 
 **Live demo:** [helloworldceo.github.io/AI-Agent-Red-Team](https://helloworldceo.github.io/AI-Agent-Red-Team/) — bring your own DeepSeek or Gemini API key, nothing is ever stored server-side. Want it run against *your* agent with a full written report? **davidabdisa40@gmail.com**.
 
+[![AI Agent Red-Team live demo: choose a target (direct chat, tool-calling agent or RAG assistant), set the attack goal and run a scan](docs/demo.jpg)](https://helloworldceo.github.io/AI-Agent-Red-Team/)
+
 Adversarial testing for AI agents — not just a raw system prompt. Most AI products today aren't a single chat completion anymore: they call tools, they read retrieved documents, they hold multi-turn conversations. This tool tests all three of those surfaces, on purpose, because that's where most real agentic deployments actually live — and where most of them ship with **zero adversarial testing**.
 
 It's a direct extension of an earlier project, [`prompt-injection-scanner`](https://github.com/helloworldceo/prompt-injection-scanner), which tested only the single "system prompt + chat completion" surface. This tool keeps that scanner's 7 attack categories and adds the attack surfaces that only exist once an LLM has tools and memory.
